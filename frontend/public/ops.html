@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Back‑Office Esercizio - TreniApp</title>
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+  <h1>Gestisci Convogli</h1>
+  <form id="fConv">
+    <input placeholder="Nome treno" id="nome">
+    <input placeholder="Tipo" id="tipo">
+    <button type="submit">Crea</button>
+  </form>
+  <script>
+  document.getElementById('fConv').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const token=localStorage.getItem('token');
+    const res=await fetch('/api/ops/convoy',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({ nome:document.getElementById('nome').value,
+                            tipo:document.getElementById('tipo').value })
+    });
+    alert(res.ok?'Creato':'Errore');
+  });
+  </script>
+</body>
+</html>

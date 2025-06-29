@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin BOA - TreniApp</title>
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+  <h1>Report Occupazione</h1>
+  <button id="load">Carica</button>
+  <table id="tbl"><thead><tr><th>Tratta</th><th>Posti venduti</th></tr></thead><tbody></tbody></table>
+<script>
+document.getElementById('load').onclick = async ()=>{
+  const token=localStorage.getItem('token');
+  const res=await fetch('/api/report/occupancy',{headers:{Authorization:'Bearer '+token}});
+  const data=await res.json();
+  const tbody=document.querySelector('#tbl tbody');
+  tbody.innerHTML='';
+  data.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.tratta_id}</td><td>${r.posti_venduti}</td>`;
+    tbody.appendChild(tr);
+  });
+};
+</script>
+</body>
+</html>
