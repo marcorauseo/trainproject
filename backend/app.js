@@ -8,6 +8,7 @@ const reportRoutes = require('./routes/report');
 const opsRoutes = require('./routes/ops');
 const errorHandler = require('./middleware/error');
 
+
 const authRoutes = require('./routes/auth');
 require('dotenv').config();
 
@@ -15,6 +16,7 @@ require('dotenv').config();
 console.log('🚀 Server starting…');
 app.use(cors());
 app.use(express.json());
+
 
 
 // Servire i file statici dalla directory 'frontend/public'

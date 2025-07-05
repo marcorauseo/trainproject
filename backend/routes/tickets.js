@@ -1,27 +1,37 @@
 const express = require('express');
-const router = express.Router();
-const pool = require('../db');
+const router  = express.Router();   
+const pool    = require('../db');
+const auth    = require('../middleware/auth');  
+// backend/routes/tickets.js
+router.post('/buy', auth(['REG','BOA','BOE']), async (req,res)=>{
+  const { tratta_id, posto='AUTO' } = req.body;
+  const utente_id = req.user.id;
 
-router.get('/routes', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM tratta');
-    res.json(result.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+  /* 1. calcola prezzo / posto libero …  */
+  /*    … stesso codice di prima (seat, prezzo) … */
 
-router.post('/buy', async (req, res) => {
-  const { utente_id, tratta_id, posto } = req.body;
-  try {
-    const result = await pool.query(
-      'INSERT INTO biglietto (utente_id, tratta_id, data_acquisto, posto) VALUES ($1, $2, NOW(), $3) RETURNING *',
-      [utente_id, tratta_id, posto]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  /* 2. crea biglietto STATO='IN_ATTESA_PAG' per ottenere l'id */
+  const ins = await pool.query(
+    `INSERT INTO BIGLIETTO
+     (ID_UTENTE, ID_CORSA, NUM_POSTO, PREZZO, STATO)
+     VALUES ($1,$2,$3,$4,'IN_ATTESA_PAG') RETURNING ID_BIGLIETTO`,
+    [utente_id, tratta_id, seat, prezzo]
+  );
+  const idBiglietto = ins.rows[0].id_biglietto;
+
+  /* 3. prepara l’URL PaySteam */
+  const url = new URL(process.env.PAYSTEAM_URL);
+  url.searchParams.set('merchant_url', 'http://localhost:3000');
+  url.searchParams.set('callback_url',
+        'http://localhost:3000/api/paysteam/notify');
+  url.searchParams.set('id_esercente', process.env.MERCHANT_ID);
+  url.searchParams.set('id_transazione', idBiglietto);
+  url.searchParams.set('descrizione',
+        `Biglietto tratta ${tratta_id}, posto ${seat}`);
+  url.searchParams.set('prezzo', prezzo.toFixed(2));
+
+  /* 4. restituisci redirect al client */
+  res.json({ redirect: url.toString() });
 });
 
 module.exports = router;

@@ -153,6 +153,9 @@ JOIN STAZIONE S_DEST    ON S_DEST.ID_STAZIONE = T.ID_STAZIONE_ARRIVO
 GROUP BY T.ID_TRENO, S_ORIG.NOME, S_DEST.NOME, T.DATA
 ORDER BY T.DATA, ORARIO_PARTENZA;
 
+CREATE UNIQUE INDEX IF NOT EXISTS vista_orari_pubblici_uidx
+ON VISTA_ORARI_PUBBLICI (ID_TRENO);
+
 /* =======================================================================
    TRIGGER: REFRESH VISTA_ORARI_PUBBLICI
    ======================================================================= */
