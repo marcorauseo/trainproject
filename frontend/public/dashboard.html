@@ -2,12 +2,90 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <title>Dashboard - TreniApp</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Treni JLT – Dashboard</title>
+  <link rel="stylesheet" href="style.css?v=3" />
+  <style>
+    body{font-family:Arial;margin:0;padding:0}
+    header{background:#0077b6;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+    table{border-collapse:collapse;width:100%;margin-top:12px}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:center}
+    th{background:#f0f0f0}
+    button.compra{padding:4px 10px}
+  </style>
 </head>
 <body>
-  <h1>Le tue tratte disponibili</h1>
-  <ul id="listaTratte"></ul>
-  <script src="dashboard.js?v=2"></script>
+<header>
+  <div>
+    <strong>JLT</strong> • Dashboard utente —
+    <span id="userName" style="font-weight:bold"></span>
+  </div>
+  <button id="logout">Logout</button>
+</header>
+
+  <table id="tblOrari">
+    <thead>
+      <tr><th>Treno</th><th>Da</th><th>A</th><th>Partenza</th><th>Arrivo</th><th></th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+  /* --- redirect se non loggato --- */
+  const token = localStorage.getItem('token');
+  if (!token) { location.href = '/index.html'; }
+
+    /* mostra il nome */
+  const userName = localStorage.getItem('user');
+  if (userName) document.getElementById('userName').textContent = userName;
+
+  /* --- logout --- */
+  document.getElementById('logout').onclick = ()=>{
+    localStorage.clear(); location.href='/index.html';
+  };
+
+  /* --- carica orari & costruisci tabella --- */
+  async function loadTable() {
+    const res = await fetch('/api/public/timetable');
+    const data = await res.json();
+    const tbody = document.querySelector('#tblOrari tbody');
+    tbody.innerHTML='';
+    data.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.id_treno}</td>
+        <td>${r.stazione_partenza}</td>
+        <td>${r.stazione_arrivo}</td>
+        <td>${r.orario_partenza}</td>
+        <td>${r.orario_arrivo}</td>
+        <td><button class="compra">Compra</button></td>`;
+      tr.querySelector('.compra').onclick = ()=>compraBiglietto(r.id_treno);
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* --- acquisto biglietto --- */
+  async function compraBiglietto(idTreno) {
+    const posto = prompt('Numero posto (es. 12A)') || 'AUTO';
+    try{
+      const res = await fetch('/api/tickets/buy',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization':'Bearer '+token
+        },
+        body:JSON.stringify({ tratta_id:idTreno, posto })
+      });
+      const data = await res.json();
+      if(res.ok){
+        alert('Biglietto acquistato! id = '+data.id);
+      }else{
+        alert(data.error||'Errore acquisto');
+      }
+    }catch(err){ alert('Errore rete'); }
+  }
+
+  loadTable();
+</script>
 </body>
 </html>

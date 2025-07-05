@@ -2,61 +2,153 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TreniApp - Home</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Treni Turistici Jennifer Lyn</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:0;padding:0}
+    header{background:#0077b6;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+    #brand{font-weight:bold;font-size:1.3rem}
+    #userArea button{margin-left:8px}
+    table{border-collapse:collapse;width:100%;margin-top:12px}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:center}
+    th{background:#f0f0f0}
+    dialog{border:none;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.25);padding:24px}
+    dialog form{display:flex;flex-direction:column;gap:12px}
+    dialog::backdrop{background:rgba(0,0,0,.4)}
+  </style>
 </head>
 <body>
-  <h1>Benvenuto su TreniApp</h1>
+  <header>
+    <span id="brand">Jennifer Lyn Trains • Orari linea turistica</span>
+    <div id="userArea">
+      <span id="welcome" style="display:none"></span>
+      <button id="btnLogin">Login</button>
+      <button id="btnRegister">Registrati</button>
+    </div>
+  </header>
 
-  <!-- Form di Login -->
-  <section id="login-section">
-    <h2>Accedi</h2>
-    <form id="loginForm">
-      <label for="email">Email:</label>
-      <input type="email" id="email" required />
-      <label for="password">Password:</label>
-      <input type="password" id="password" required />
-      <button type="submit">Accedi</button>
+  <table id="tblOrari">
+    <thead>
+      <tr><th>Treno</th><th>Da</th><th>A</th><th>Partenza</th><th>Arrivo</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Dialog Login -->
+  <dialog id="dlgLogin">
+    <h3>Login</h3>
+    <form id="frmLogin" method="dialog">
+      <input id="loginEmail" type="email" placeholder="Email" required />
+      <input id="loginPwd" type="password" placeholder="Password" required />
+      <div>
+        <button type="submit">Accedi</button>
+        <button type="button" onclick="dlgLogin.close()">Annulla</button>
+      </div>
     </form>
-  </section>
+  </dialog>
 
-  <!-- Pulsante di Registrazione -->
-  <section id="register-section">
-    <h2>Nuovo utente?</h2>
-    <button id="registerButton">Registrati</button>
-  </section>
+  <!-- Dialog Registrazione -->
+  <dialog id="dlgReg">
+    <h3>Registrazione</h3>
+    <form id="frmReg" method="dialog">
+      <input id="regNome" type="text" placeholder="Nome" required />
+      <input id="regCognome" type="text" placeholder="Cognome" required />
+      <input id="regEmail" type="email" placeholder="Email" required />
+      <input id="regPwd" type="password" placeholder="Password (≥8)" minlength="8" required />
+      <div>
+        <button type="submit">Crea account</button>
+        <button type="button" onclick="dlgReg.close()">Annulla</button>
+      </div>
+    </form>
+  </dialog>
 
   <script>
-    // Gestione del login
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    /* ---------- tabella orari VIS ----------- */
+    async function loadTimetable() {
+      const res = await fetch('/api/public/timetable');
+      const data = await res.json();
+      const tbody = document.querySelector('#tblOrari tbody');
+      tbody.innerHTML = '';
+      data.forEach(r => {
+        tbody.insertAdjacentHTML('beforeend',
+          `<tr>
+             <td>${r.id_treno}</td>
+             <td>${r.stazione_partenza}</td>
+             <td>${r.stazione_arrivo}</td>
+             <td>${r.orario_partenza}</td>
+             <td>${r.orario_arrivo}</td>
+           </tr>`);
+      });
+    }
+    loadTimetable();
+
+    /* ---------- login / registrazione UI ----------- */
+    const dlgLogin = document.getElementById('dlgLogin');
+    const dlgReg   = document.getElementById('dlgReg');
+    document.getElementById('btnLogin').onclick    = () => dlgLogin.showModal();
+    document.getElementById('btnRegister').onclick = () => dlgReg.showModal();
+
+    /* saluta se già loggato */
+    function updateWelcome() {
+      const jwt = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (jwt && user) {
+        document.getElementById('welcome').textContent = 'Benvenuto ' + user;
+        document.getElementById('welcome').style.display = 'inline';
+        document.getElementById('btnLogin').style.display =
+        document.getElementById('btnRegister').style.display = 'none';
+      }
+    }
+    updateWelcome();
+
+    /* login fetch */
+    document.getElementById('frmLogin').addEventListener('submit', async e => {
       e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await response.json();
-        if (response.ok) {
-          alert('Login effettuato con successo');
-          localStorage.setItem('token', data.token);
-          // Reindirizza alla dashboard o altra pagina protetta
-          // window.location.href = '/dashboard.html';
-        } else {
-          alert(data.error);
-        }
-      } catch (error) {
-        console.error('Errore durante il login:', error);
-        alert('Si è verificato un errore durante il login.');
+      const email = loginEmail.value, password = loginPwd.value;
+      const res = await fetch('/api/auth/login', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', data.nome || email);
+        dlgLogin.close();
+        console.log('Login effettuato:', data);
+        updateWelcome();
+        alert('Login effettuato con successo!');
+        /* reindirizza alla dashboard */
+       location.href = '/dashboard.html';   
+        
+      } else {
+        alert(data.error || 'Credenziali errate');
       }
     });
 
-    // Reindirizzamento alla pagina di registrazione
-    document.getElementById('registerButton').addEventListener('click', () => {
-      window.location.href = '/register.html';
+    /* registrazione fetch */
+    document.getElementById('frmReg').addEventListener('submit', async e => {
+      e.preventDefault();
+      const body = {
+        nome: regNome.value,
+        cognome: regCognome.value,
+        email: regEmail.value,
+        password: regPwd.value
+      };
+      const res = await fetch('/api/auth/register', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+dlgReg.close();
+alert('Registrazione avvenuta! Effettua il login.');
+dlgLogin.showModal();  
+      } else {
+        const msg = data.errors ? data.errors[0].msg : data.error;
+        alert(msg || 'Errore di registrazione');
+      }
     });
   </script>
 </body>

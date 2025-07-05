@@ -11,11 +11,15 @@ const errorHandler = require('./middleware/error');
 const authRoutes = require('./routes/auth');
 require('dotenv').config();
 
+
+console.log('🚀 Server starting…');
 app.use(cors());
 app.use(express.json());
 
-// Servire i file statici dalla directory 'public'
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Servire i file statici dalla directory 'frontend/public'
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'public')));
+
 
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/auth', authRoutes);
