@@ -2,12 +2,12 @@
    POPOLAMENTO MINIMO PER TEST ACQUISTO BIGLIETTO
    ======================================================================= */
 
-TRUNCATE LINEE, STAZIONE, SUB_TRATTA, TIPO_MATERIALE_ROTABILE,
+TRUNCATE LINEA, STAZIONE, SUB_TRATTA, TIPO_MATERIALE_ROTABILE,
          MATERIALE_ROTABILE, CONVOGLIO, TRENO, CORSA_SUB_TRATTA,
          TRACCIA_ORARIA, UTENTE, BIGLIETTO RESTART IDENTITY CASCADE;    
 
 /* ---------- LINEA ----------------------------------------------------- */
-INSERT INTO LINEE (LUNGHEZZA_KM) VALUES (600) RETURNING ID_LINEA;
+INSERT INTO LINEA (LUNGHEZZA_KM) VALUES (600) RETURNING ID_LINEA;
 -- supponiamo ritorni 1
 
 /* ---------- STAZIONI -------------------------------------------------- */

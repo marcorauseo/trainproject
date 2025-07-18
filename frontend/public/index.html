@@ -64,24 +64,7 @@
   </dialog>
 
   <script>
-    /* ---------- tabella orari VIS ----------- */
-    async function loadTimetable() {
-      const res = await fetch('/api/public/timetable');
-      const data = await res.json();
-      const tbody = document.querySelector('#tblOrari tbody');
-      tbody.innerHTML = '';
-      data.forEach(r => {
-        tbody.insertAdjacentHTML('beforeend',
-          `<tr>
-             <td>${r.id_treno}</td>
-             <td>${r.stazione_partenza}</td>
-             <td>${r.stazione_arrivo}</td>
-             <td>${r.orario_partenza}</td>
-             <td>${r.orario_arrivo}</td>
-           </tr>`);
-      });
-    }
-    loadTimetable();
+
 
     /* ---------- login / registrazione UI ----------- */
     const dlgLogin = document.getElementById('dlgLogin');
@@ -185,7 +168,8 @@ dlgLogin.showModal();
       document.getElementById('welcome').textContent = 'Benvenuto ' + userName;
       document.getElementById('welcome').style.display = 'inline';
     } 
-</script>  
+  </script>  
+
   <script>
     /* --- logout --- */
     document.getElementById('logout').onclick = () => {
