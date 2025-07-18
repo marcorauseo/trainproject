@@ -4,15 +4,27 @@ const pool    = require('../db');
 const router  = express.Router();
 
 router.post('/notify', async (req, res) => {
-  const { idTransazione, esito } = req.body;          // OK | KO
+  const { idTransazione, esito } = req.body;
+
+  if (!['OK', 'KO'].includes(esito)) {
+    return res.status(400).json({ error: 'Esito non valido' });
+  }
+
+  const nuovoStato = esito === 'OK' ? 'PAGATO' : 'KO';
+  console.log('esito:', esito);
+  console.log('nuovoStato:', nuovoStato);
+  console.log('idTransazione:', idTransazione);
+
   try {
     await pool.query(
-      'UPDATE BIGLIETTO SET STATO=$1 WHERE ID_BIGLIETTO=$2',
-      [esito === 'OK' ? 'PAGATO' : 'KO', idTransazione]
+      `UPDATE BIGLIETTO SET STATO = $1 WHERE ID_BIGLIETTO = $2`,
+      [nuovoStato, idTransazione]
     );
-    res.sendStatus(200);
+
+    res.status(200).json({ message: 'Stato aggiornato a ' + nuovoStato });
   } catch (err) {
-    console.error(err); res.sendStatus(500);
+    console.error(err);
+    res.status(500).json({ error: 'Errore aggiornamento stato biglietto' });
   }
 });
 

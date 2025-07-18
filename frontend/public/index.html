@@ -198,24 +198,31 @@ dlgLogin.showModal();
     }
 
     /* --- acquisto biglietto --- */
-    async function compraBiglietto(idTreno) {
-      const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
-      const res = await fetch('/api/tickets/buy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ tratta_id: idTreno, posto })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        // reindirizza l’utente alla pagina PaySteam
-        location.href = data.redirect;
-      } else {
-        alert(data.error || 'Errore acquisto');
-      }
-    }
+async function compraBiglietto(idTreno) {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('⚠️ Fai login o registrati per comprare un biglietto.');
+    return;
+  }
+
+  const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
+
+  const res = await fetch('/api/tickets/buy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ tratta_id: idTreno, posto })
+  });
+
+  const data = await res.json();
+  if (res.ok) {
+    location.href = data.redirect;
+  } else {
+    alert(data.error || 'Errore acquisto');
+  }
+}
 
     loadTable();
   </script>

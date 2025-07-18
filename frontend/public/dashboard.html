@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -17,47 +18,56 @@
 <body>
 <header>
   <div>
-    <strong>JLT</strong> • Dashboard utente —
+    <strong>JLT</strong> • Dashboard utente — 
     <span id="userName" style="font-weight:bold"></span>
   </div>
   <button id="logout">Logout</button>
-  <button id="gotoMy">I miei biglietti</button>
-  <script>
-    document.getElementById('gotoMy').onclick = () => {
-      location.href = '/my-tickets.html';
-    };
-  </script>
 </header>
 
-  <table id="tblOrari">
-    <thead>
-      <tr><th>Treno</th><th>Da</th><th>A</th><th>Partenza</th><th>Arrivo</th><th></th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<h2>Orari disponibili</h2>
+<table id="tblOrari">
+  <thead>
+    <tr><th>Treno</th><th>Da</th><th>A</th><th>Partenza</th><th>Arrivo</th><th></th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<h2>I miei biglietti</h2>
+<table id="tblBiglietti">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Corsa</th>
+      <th>Partenza</th>
+      <th>Arrivo</th>
+      <th>Data</th>
+      <th>Posto</th>
+      <th>Prezzo (€)</th>
+      <th>Stato</th>
+      <th>Azioni</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
 
 <script>
-  /* --- redirect se non loggato --- */
   const token = localStorage.getItem('token');
-  if (!token) { location.href = '/index.html'; }
+  if (!token) location.href = '/index.html';
 
-    /* mostra il nome */
   const userName = localStorage.getItem('user');
   if (userName) document.getElementById('userName').textContent = userName;
 
-  /* --- logout --- */
-  document.getElementById('logout').onclick = ()=>{
-    localStorage.clear(); location.href='/index.html';
+  document.getElementById('logout').onclick = () => {
+    localStorage.clear(); location.href = '/index.html';
   };
 
-  /* --- carica orari & costruisci tabella --- */
   async function loadTable() {
     const res = await fetch('/api/public/timetable');
     const data = await res.json();
     const tbody = document.querySelector('#tblOrari tbody');
-    tbody.innerHTML='';
-    data.forEach(r=>{
-      const tr=document.createElement('tr');
+    tbody.innerHTML = '';
+    data.forEach(r => {
+      const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${r.id_treno}</td>
         <td>${r.stazione_partenza}</td>
@@ -65,32 +75,75 @@
         <td>${r.orario_partenza}</td>
         <td>${r.orario_arrivo}</td>
         <td><button class="compra">Compra</button></td>`;
-      tr.querySelector('.compra').onclick = ()=>compraBiglietto(r.id_treno);
+      tr.querySelector('.compra').onclick = () => compraBiglietto(r.id_treno);
       tbody.appendChild(tr);
     });
   }
 
-  /* --- acquisto biglietto --- */
-async function compraBiglietto(idTreno) {
-  const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
-  const res   = await fetch('/api/tickets/buy',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'Authorization':'Bearer '+token
-    },
-    body:JSON.stringify({ tratta_id:idTreno, posto })
-  });
-  const data = await res.json();
-  if(res.ok){
-    // reindirizza l’utente alla pagina PaySteam
-    location.href = data.redirect;
-  }else{
-    alert(data.error||'Errore acquisto');
+  async function compraBiglietto(idTreno) {
+    const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
+    const res = await fetch('/api/tickets/buy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ tratta_id: idTreno, posto })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      alert('Biglietto acquistato! Attendi conferma da PaySteam...');
+      loadBiglietti();
+    } else {
+      alert(data.error || 'Errore acquisto');
+    }
   }
-}
+
+  async function loadBiglietti() {
+    const res = await fetch('/api/tickets/mine', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    const tbody = document.querySelector('#tblBiglietti tbody');
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9">Nessun biglietto trovato.</td></tr>';
+      return;
+    }
+
+    data.forEach(b => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${b.id_biglietto}</td>
+        <td>${b.codice_corsa}</td>
+        <td>${b.partenza}</td>
+        <td>${b.arrivo}</td>
+        <td>${b.data}</td>
+        <td>${b.num_posto || '-'}</td>
+        <td>${b.prezzo ? Number(b.prezzo).toFixed(2) : '-'}</td>
+        <td>${b.stato}</td>
+        <td>${
+          ['PAGATO', 'IN_ATTESA_PAG'].includes(b.stato)
+            ? `<button onclick="annulla(${b.id_biglietto})">Annulla</button>`
+            : '-'
+        }</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function annulla(id) {
+    if (!confirm('Annullare questo biglietto?')) return;
+    const res = await fetch('/api/tickets/' + id + '/cancel', {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    alert(data.message || data.error);
+    loadBiglietti();
+  }
 
   loadTable();
+  loadBiglietti();
 </script>
 </body>
 </html>
