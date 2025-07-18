@@ -21,6 +21,12 @@
     <span id="userName" style="font-weight:bold"></span>
   </div>
   <button id="logout">Logout</button>
+  <button id="gotoMy">I miei biglietti</button>
+  <script>
+    document.getElementById('gotoMy').onclick = () => {
+      location.href = '/my-tickets.html';
+    };
+  </script>
 </header>
 
   <table id="tblOrari">

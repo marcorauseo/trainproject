@@ -20,11 +20,12 @@
 <body>
   <header>
     <span id="brand">Jennifer Lyn Trains • Orari linea turistica</span>
-    <div id="userArea">
-      <span id="welcome" style="display:none"></span>
-      <button id="btnLogin">Login</button>
-      <button id="btnRegister">Registrati</button>
-    </div>
+<div id="userArea">
+  <span id="welcome" style="display:none"></span>
+  <button id="btnLogin">Login</button>
+  <button id="btnRegister">Registrati</button>
+  <button id="logout" style="display:none">Logout</button>
+</div>
   </header>
 
   <table id="tblOrari">
@@ -89,16 +90,22 @@
     document.getElementById('btnRegister').onclick = () => dlgReg.showModal();
 
     /* saluta se già loggato */
-    function updateWelcome() {
-      const jwt = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      if (jwt && user) {
-        document.getElementById('welcome').textContent = 'Benvenuto ' + user;
-        document.getElementById('welcome').style.display = 'inline';
-        document.getElementById('btnLogin').style.display =
-        document.getElementById('btnRegister').style.display = 'none';
-      }
-    }
+function updateWelcome() {
+  const jwt = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  if (jwt && user) {
+    document.getElementById('welcome').textContent = 'Benvenuto ' + user;
+    document.getElementById('welcome').style.display = 'inline';
+    document.getElementById('btnLogin').style.display =
+    document.getElementById('btnRegister').style.display = 'none';
+    document.getElementById('logout').style.display = 'inline';
+  }
+  else {
+    document.getElementById('welcome').style.display = 'none';
+    document.getElementById('btnLogin').style.display =
+    document.getElementById('btnRegister').style.display = 'inline';
+    document.getElementById('logout').style.display = 'none';
+  }}
     updateWelcome();
 
     /* login fetch */
@@ -151,5 +158,84 @@ dlgLogin.showModal();
       }
     });
   </script>
+  <script>
+    /* --- dialog login/registrazione chiuso --- */
+    dlgLogin.addEventListener('close', () => {
+      document.getElementById('loginEmail').value = '';
+      document.getElementById('loginPwd').value = '';
+    });
+    dlgReg.addEventListener('close', () => {
+      document.getElementById('regNome').value = '';
+      document.getElementById('regCognome').value = '';
+      document.getElementById('regEmail').value = '';
+      document.getElementById('regPwd').value = '';
+    });
+  </script>
+
+  <script>
+    /* --- redirect se non loggato --- */
+    const token = localStorage.getItem('token');
+    if (!token) {
+      location.href = '/index.html';
+    }
+
+    /* mostra il nome */
+    const userName = localStorage.getItem('user');
+    if (userName) {
+      document.getElementById('welcome').textContent = 'Benvenuto ' + userName;
+      document.getElementById('welcome').style.display = 'inline';
+    } 
+</script>  
+  <script>
+    /* --- logout --- */
+    document.getElementById('logout').onclick = () => {
+      localStorage.clear();
+      location.href = '/index.html';
+    };
+
+    /* --- carica orari & costruisci tabella --- */
+    async function loadTable() {
+      const res = await fetch('/api/public/timetable');
+      const data = await res.json();
+      const tbody = document.querySelector('#tblOrari tbody');
+      tbody.innerHTML = '';
+      data.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.id_treno}</td>
+          <td>${r.stazione_partenza}</td>
+          <td>${r.stazione_arrivo}</td>
+          <td>${r.orario_partenza}</td>
+          <td>${r.orario_arrivo}</td>
+          <td><button class="compra">Compra</button></td>`;
+        tr.querySelector('.compra').onclick = () => compraBiglietto(r.id_treno);
+        tbody.appendChild(tr);
+      });
+    }
+
+    /* --- acquisto biglietto --- */
+    async function compraBiglietto(idTreno) {
+      const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
+      const res = await fetch('/api/tickets/buy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ tratta_id: idTreno, posto })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // reindirizza l’utente alla pagina PaySteam
+        location.href = data.redirect;
+      } else {
+        alert(data.error || 'Errore acquisto');
+      }
+    }
+
+    loadTable();
+  </script>
+
+
 </body>
 </html>

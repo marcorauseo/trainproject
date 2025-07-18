@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="it"><head>
+<meta charset="UTF-8"><title>I miei biglietti</title>
+<style>
+body{font-family:Arial;margin:0;padding:0}
+header{background:#0077b6;color:#fff;padding:10px 18px;display:flex;justify-content:space-between;align-items:center}
+table{border-collapse:collapse;width:100%;margin-top:12px}
+th,td{border:1px solid #ccc;padding:6px 8px;text-align:center}
+th{background:#f0f0f0}
+button.annulla{padding:4px 10px}
+</style></head><body>
+<header>
+  <div><strong>SFT</strong> • I miei biglietti</div>
+  <button onclick="location.href='dashboard.html'">Torna alla dashboard</button>
+</header>
+
+<table id="tbl">
+ <thead><tr>
+   <th>ID</th><th>Corsa</th><th>Data</th><th>Da</th><th>A</th>
+   <th>Posto</th><th>Prezzo</th><th>Stato</th><th></th>
+ </tr></thead><tbody></tbody>
+</table>
+
+<script>
+const token = localStorage.getItem('token');
+if(!token) location.href='/index.html';
+
+async function loadTickets(){
+  const res = await fetch('/api/tickets/mine',{
+    headers:{'Authorization':'Bearer '+token}
+  });
+  const data = await res.json();
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  data.forEach(b=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${b.id_biglietto}</td>
+      <td>${b.codice_corsa}</td>
+      <td>${b.data}</td>
+      <td>${b.partenza}</td>
+      <td>${b.arrivo}</td>
+      <td>${b.num_posto}</td>
+      <td>€${b.prezzo}</td>
+      <td>${b.stato}</td>
+      <td>${b.stato!=='ANNULLATO'?
+        `<button class="annulla">Annulla</button>`:''}</td>`;
+    if (b.stato!=='ANNULLATO'){
+      tr.querySelector('.annulla').onclick=()=>annulla(b.id_biglietto);
+    }
+    tb.appendChild(tr);
+  });
+}
+async function annulla(id){
+  if(!confirm('Annullare il biglietto #'+id+'?')) return;
+  const res=await fetch('/api/tickets/'+id+'/cancel',{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token}
+  });
+  const data=await res.json();
+  alert(data.error||data.message);
+  loadTickets();
+}
+loadTickets();
+</script>
+</body></html>

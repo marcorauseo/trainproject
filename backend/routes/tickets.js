@@ -1,37 +1,54 @@
+/* già in testa */
 const express = require('express');
-const router  = express.Router();   
+const router  = express.Router();
 const pool    = require('../db');
-const auth    = require('../middleware/auth');  
-// backend/routes/tickets.js
-router.post('/buy', auth(['REG','BOA','BOE']), async (req,res)=>{
-  const { tratta_id, posto='AUTO' } = req.body;
-  const utente_id = req.user.id;
+const auth    = require('../middleware/auth');
 
-  /* 1. calcola prezzo / posto libero …  */
-  /*    … stesso codice di prima (seat, prezzo) … */
+/* … POST /buy già presente … */
 
-  /* 2. crea biglietto STATO='IN_ATTESA_PAG' per ottenere l'id */
-  const ins = await pool.query(
-    `INSERT INTO BIGLIETTO
-     (ID_UTENTE, ID_CORSA, NUM_POSTO, PREZZO, STATO)
-     VALUES ($1,$2,$3,$4,'IN_ATTESA_PAG') RETURNING ID_BIGLIETTO`,
-    [utente_id, tratta_id, seat, prezzo]
-  );
-  const idBiglietto = ins.rows[0].id_biglietto;
+/* --------- 1. lista biglietti dell’utente --------- */
+router.get('/mine', auth(['REG','BOA','BOE']), async (req, res) => {
+  try {
+    const r = await pool.query(`
+      SELECT B.ID_BIGLIETTO, B.STATO, B.PREZZO, B.NUM_POSTO,
+             T.CODICE_CORSA, T.DATA,
+             S1.NOME AS PARTENZA, S2.NOME AS ARRIVO
+      FROM   BIGLIETTO B
+      JOIN   TRENO T  ON T.ID_TRENO = B.ID_CORSA
+      JOIN   STAZIONE S1 ON S1.ID_STAZIONE = T.ID_STAZIONE_PARTENZA
+      JOIN   STAZIONE S2 ON S2.ID_STAZIONE = T.ID_STAZIONE_ARRIVO
+      WHERE  B.ID_UTENTE = $1
+      ORDER BY T.DATA DESC
+    `, [req.user.id]);
 
-  /* 3. prepara l’URL PaySteam */
-  const url = new URL(process.env.PAYSTEAM_URL);
-  url.searchParams.set('merchant_url', 'http://localhost:3000');
-  url.searchParams.set('callback_url',
-        'http://localhost:3000/api/paysteam/notify');
-  url.searchParams.set('id_esercente', process.env.MERCHANT_ID);
-  url.searchParams.set('id_transazione', idBiglietto);
-  url.searchParams.set('descrizione',
-        `Biglietto tratta ${tratta_id}, posto ${seat}`);
-  url.searchParams.set('prezzo', prezzo.toFixed(2));
-
-  /* 4. restituisci redirect al client */
-  res.json({ redirect: url.toString() });
+    res.json(r.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Errore lettura biglietti' });
+  }
 });
 
-module.exports = router;
+/* --------- 2. annulla biglietto (se ancora non partito) --------- */
+router.patch('/:id/cancel', auth(['REG','BOA','BOE']), async (req,res)=>{
+  const id = req.params.id;
+  try {
+    const upd = await pool.query(
+      `UPDATE BIGLIETTO
+       SET STATO = 'ANNULLATO'
+       WHERE ID_BIGLIETTO=$1
+         AND ID_UTENTE=$2
+         AND STATO IN ('IN_ATTESA_PAG','PAGATO')
+       RETURNING *`,
+      [id, req.user.id]
+    );
+    if (upd.rowCount === 0)
+      return res.status(409).json({ error:'Impossibile annullare' });
+
+    res.json({ message:'Biglietto annullato', id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error:'Errore annullo' });
+  }
+});
+
+module.exports = router;   /* unica export */
