@@ -17,6 +17,9 @@ console.log('🚀 Server starting…');
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/paysteam', require('./routes/paysteamHook'));
+
+
 
 
 // Servire i file statici dalla directory 'frontend/public'
