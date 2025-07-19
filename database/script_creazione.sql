@@ -134,6 +134,8 @@ CREATE INDEX IDX_BIGLIETTO_UTENTE ON BIGLIETTO(ID_UTENTE);
 CREATE INDEX IDX_BIGLIETTO_CORSA  ON BIGLIETTO(ID_CORSA);
 CREATE INDEX IDX_BIGLIETTO_ROTAB  ON BIGLIETTO(ID_ROTABILE);
 
+
+
 /* =======================================================================
    VISTA MATERIALIZZATA: ORARI PUBBLICI
    ======================================================================= */
