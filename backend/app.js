@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -7,11 +6,9 @@ require('dotenv').config();
 const app = express();
 console.log('🚀 Server starting…');
 
-
-
 // ✅ Middleware prima delle route
-app.use(cors());
-app.use(express.json()); // << Questo deve venire prima di tutte le route
+app.use(cors()); // deve essere qui, prima di tutte le rotte
+app.use(express.json());
 
 // ✅ Rotte API
 app.use('/api/paysteam', require('./routes/paysteamHook'));
@@ -24,11 +21,17 @@ app.use('/api', require('./routes/boa'));
 app.use('/api/boe', require('./routes/boe'));
 app.use('/api', require('./routes/boe'));
 
-
-
-
 // ✅ Static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'public')));
+
+// ✅ Route per ricevere la notifica da PaySteam
+app.post('/api/paysteam/notify', (req, res) => {
+  console.log("📬 Notifica ricevuta:", req.body);
+  console.log("=== RICHIESTA NOTIFICA RICEVUTA ===");
+  console.log(req.headers);
+  console.log(req.body);
+  res.status(200).json({ received: true });
+});
 
 // ✅ Gestione errori
 const errorHandler = require('./middleware/error');
@@ -38,12 +41,4 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
-});
-
-app.post('/api/paysteam/notify', (req, res) => {
-  console.log("📬 Notifica ricevuta:", req.body);
-   console.log("=== RICHIESTA NOTIFICA RICEVUTA ===");
-  console.log(req.headers);
-  console.log(req.body);
-  res.status(200).json({ received: true });
 });
