@@ -1,40 +1,54 @@
 
--- LINEA TURISTICA
-INSERT INTO LINEA (LUNGHEZZA_KM) VALUES (54.68);
+-- ================== RESET TABELLE ==================
+TRUNCATE TABLE 
+  biglietto,
+  traccia_oraria,
+  corsa_sub_tratta,
+  treno,
+  convoglio
+RESTART IDENTITY CASCADE;
 
--- STAZIONI
-INSERT INTO STAZIONE (NOME, KM, ID_LINEA) VALUES
-  ('Torre Spaventa', 0.000, 1),
-  ('Prato Terra', 2.700, 1),
-  ('Rocca Pietrosa', 7.580, 1),
-  ('Villa Pietrosa', 12.680, 1),
-  ('Villa Santa Maria', 16.900, 1),
-  ('Pietra Santa Maria', 23.950, 1),
-  ('Castro Marino', 31.500, 1),
-  ('Porto Spigola', 39.500, 1),
-  ('Porto San Felice', 46.000, 1),
-  ('Villa San Felice', 54.680, 1);
+-- ================== INSERIMENTI COMPLETI ==================
+DO $$
+DECLARE
+  tr1_id INT;
+  tr2_id INT;
+BEGIN
+  -- Convoglio
+  INSERT INTO CONVOGLIO (NOME_CONVOGLIO, ID_MATERIALE_ROTABILE, POSIZIONE_NEL_CONVOGLIO)
+  VALUES 
+    ('Convoglio_2', 3, 1),
+    ('Convoglio_2', 4, 2),
+    ('Convoglio_2', 6, 3);
 
--- TIPO MATERIALE ROTABILE
-INSERT INTO TIPO_MATERIALE_ROTABILE (SIGLA_SERIE, CATEGORIA, SEDUTE)
-VALUES ('B1', 'Carrozza 1928', 36);
+  -- Treni
+  INSERT INTO TRENO (DATA, CODICE_CORSA, DIREZIONE_CORSA, ID_CONVOGLIO, ID_STAZIONE_PARTENZA, ID_STAZIONE_ARRIVO)
+  VALUES 
+    ('2025-07-21', 'TR003', 'A', 2, 1, 10)
+  RETURNING ID_TRENO INTO tr1_id;
 
--- MATERIALE ROTABILE
-INSERT INTO MATERIALE_ROTABILE (ID_TIPO_MATERIALE, NUM_POSTO, CODICE_PROGRESSIVO, DATA_MANUTENZIONE)
-VALUES (1, 36, 'B1-001', '2025-07-01');
+  INSERT INTO TRENO (DATA, CODICE_CORSA, DIREZIONE_CORSA, ID_CONVOGLIO, ID_STAZIONE_PARTENZA, ID_STAZIONE_ARRIVO)
+  VALUES 
+    ('2025-07-21', 'TR004', 'R', 2, 10, 1)
+  RETURNING ID_TRENO INTO tr2_id;
 
--- CONVOGLIO
-INSERT INTO CONVOGLIO (NOME_CONVOGLIO, ID_MATERIALE_ROTABILE, POSIZIONE_NEL_CONVOGLIO)
-VALUES ('Convoglio Test', 1, 1);
+  -- Traccia oraria TR003
+  INSERT INTO TRACCIA_ORARIA (ID_STAZIONE, ID_CORSA, ORARIO_PARTENZA, ORARIO_ARRIVO, KM_CUMULATI, VELOCITA)
+  VALUES
+    (1, tr1_id, '08:00'::TIME, NULL, 0, 50),
+    (10, tr1_id, NULL, '09:10'::TIME, 54.68, 50);
 
--- TRENO
-INSERT INTO TRENO (DATA, CODICE_CORSA, DIREZIONE_CORSA, ID_CONVOGLIO, ID_STAZIONE_PARTENZA, ID_STAZIONE_ARRIVO)
-VALUES ('2025-07-21', 'TS-VSF-1', 'A', 1, 1, 10);
+  -- Traccia oraria TR004
+  INSERT INTO TRACCIA_ORARIA (ID_STAZIONE, ID_CORSA, ORARIO_PARTENZA, ORARIO_ARRIVO, KM_CUMULATI, VELOCITA)
+  VALUES
+    (10, tr2_id, '10:00'::TIME, NULL, 54.68, 50),
+    (1, tr2_id, NULL, '11:10'::TIME, 0, 50);
 
--- TRACCIA ORARIA
-INSERT INTO TRACCIA_ORARIA (ID_STAZIONE, ID_CORSA, ORARIO_PARTENZA, ORARIO_ARRIVO, KM_CUMULATI, VELOCITA)
-VALUES 
-  (1, 1, '09:00', NULL, 0.00, 50.0),      -- Torre Spaventa (partenza)
-  (10, 1, NULL, '11:00', 54.68, 50.0);    -- Villa San Felice (arrivo)
-
--- La vista si aggiornerà automaticamente grazie al trigger
+  -- Biglietti
+  INSERT INTO BIGLIETTO (ID_UTENTE, ID_CORSA, ID_ROTABILE, NUM_POSTO, PREZZO, STATO)
+  VALUES
+    (1, tr1_id, 3, 10, 15.00, 'pagato'),
+    (1, tr1_id, 3, 11, 15.00, 'pagato'),
+    (1, tr1_id, 4, 12, 15.00, 'pagato'),
+    (1, tr2_id, 3, 5, 15.00, 'pagato');
+END $$;

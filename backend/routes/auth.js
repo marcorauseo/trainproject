@@ -9,7 +9,7 @@ const { body, validationResult } = require('express-validator');
 // Registrazione
 router.post('/register', async (req, res) => {
 
-  const { nome, cognome, email, password } = req.body;
+  const { nome, cognome, email, password,ruolo  } = req.body;
 
   if (!nome || !cognome || !email || !password)
     return res.status(400).json({ error: 'Campi obbligatori mancanti' });
@@ -18,9 +18,9 @@ router.post('/register', async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(`
       INSERT INTO utente (NOME, COGNOME, EMAIL, HASH_PWD, RUOLO)
-      VALUES ($1, $2, $3, $4, 'REG')
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING ID_UTENTE
-    `, [nome, cognome, email, hash]);
+    `, [nome, cognome, email, hash,ruolo]);
 
     res.status(201).json({ message: 'Registrazione completata', id: result.rows[0].id_utente });
   } catch (err) {
@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
-    res.json({ message: 'Login OK', token, nome: user.nome });
+    res.json({ message: 'Login OK', token, nome: user.nome, ruolo: user.ruolo });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Errore durante il login' });

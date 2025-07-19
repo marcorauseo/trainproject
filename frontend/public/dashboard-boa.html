@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard BOA - Backoffice Amministrativo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    button { margin: 4px; }
+    canvas { max-width: 800px; margin-top: 20px; }
+    label, input { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Dashboard Backoffice Amministrativo (BOA)</h1>
+
+  <section>
+    <h2>Richieste verso BOE</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID Treno</th>
+          <th>% Occupazione</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="trainTable">
+        <!-- Popolamento dinamico -->
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Report Occupazione</h2>
+    <label for="dal">Dal:</label>
+    <input type="date" id="dal">
+    <label for="al">Al:</label>
+    <input type="date" id="al">
+    <button onclick="generaReport()">Genera</button>
+    <canvas id="grafico"></canvas>
+  </section>
+
+  <script>
+    const token = localStorage.getItem('token');
+
+    async function caricaOccupazione() {
+      const res = await fetch('/api/boa/occupazione', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const dati = await res.json();
+      const tbody = document.getElementById("trainTable");
+      tbody.innerHTML = '';
+
+      dati.forEach(treno => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${treno.id_treno}</td>
+          <td>${(treno.percentuale || 0).toFixed(2)}%</td>
+          <td>
+            <button onclick="richiediStraordinario(${treno.id_treno})">Treno Straordinario</button>
+            <button onclick="richiediCessazione(${treno.id_treno})">Cessa se Vuoto</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function richiediStraordinario(id) {
+      const ok = confirm("Confermi richiesta treno straordinario per ID " + id + "?");
+      if (!ok) return;
+      await fetch('/api/boa/straordinario', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id_treno: id })
+      });
+      alert("Richiesta inviata.");
+    }
+
+    async function richiediCessazione(id) {
+      const ok = confirm("Confermi richiesta di cessazione per ID " + id + "?");
+      if (!ok) return;
+      await fetch('/api/boa/cessazione', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ id_treno: id })
+      });
+      alert("Richiesta inviata.");
+    }
+
+    async function generaReport() {
+      const dal = document.getElementById('dal').value;
+      const al  = document.getElementById('al').value;
+      if (!dal || !al) return alert('Inserisci intervallo valido');
+
+      const res = await fetch(`/api/report/occupazione?dal=${dal}&al=${al}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const dati = await res.json();
+
+      const labels = dati.map(r => `${r.codice_corsa} (${r.data})`);
+      const percentuali = dati.map(r => r.percentuale);
+
+      const ctx = document.getElementById('grafico').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '% Occupazione',
+            data: percentuali,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 100 }
+          }
+        }
+      });
+    }
+
+    caricaOccupazione();
+  </script>
+</body>
+</html>

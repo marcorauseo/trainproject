@@ -20,12 +20,12 @@
 <body>
   <header>
     <span id="brand">Jennifer Lyn Trains • Orari linea turistica</span>
-<div id="userArea">
-  <span id="welcome" style="display:none"></span>
-  <button id="btnLogin">Login</button>
-  <button id="btnRegister">Registrati</button>
-  <button id="logout" style="display:none">Logout</button>
-</div>
+    <div id="userArea">
+      <span id="welcome" style="display:none"></span>
+      <button id="btnLogin">Login</button>
+      <button id="btnRegister">Registrati</button>
+      <button id="logout" style="display:none">Logout</button>
+    </div>
   </header>
 
   <table id="tblOrari">
@@ -56,6 +56,12 @@
       <input id="regCognome" type="text" placeholder="Cognome" required />
       <input id="regEmail" type="email" placeholder="Email" required />
       <input id="regPwd" type="password" placeholder="Password (≥8)" minlength="8" required />
+      <label for="ruolo">Ruolo:</label>
+      <select id="ruolo" name="ruolo" required>
+        <option value="REG">Utente regolare</option>
+        <option value="BOA">Backoffice Amministrativo (BOA)</option>
+        <option value="BOE">Backoffice Esercizio (BOE)</option>
+      </select>
       <div>
         <button type="submit">Crea account</button>
         <button type="button" onclick="dlgReg.close()">Annulla</button>
@@ -64,34 +70,28 @@
   </dialog>
 
   <script>
-
-
-    /* ---------- login / registrazione UI ----------- */
     const dlgLogin = document.getElementById('dlgLogin');
     const dlgReg   = document.getElementById('dlgReg');
     document.getElementById('btnLogin').onclick    = () => dlgLogin.showModal();
     document.getElementById('btnRegister').onclick = () => dlgReg.showModal();
 
-    /* saluta se già loggato */
-function updateWelcome() {
-  const jwt = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  if (jwt && user) {
-    document.getElementById('welcome').textContent = 'Benvenuto ' + user;
-    document.getElementById('welcome').style.display = 'inline';
-    document.getElementById('btnLogin').style.display =
-    document.getElementById('btnRegister').style.display = 'none';
-    document.getElementById('logout').style.display = 'inline';
-  }
-  else {
-    document.getElementById('welcome').style.display = 'none';
-    document.getElementById('btnLogin').style.display =
-    document.getElementById('btnRegister').style.display = 'inline';
-    document.getElementById('logout').style.display = 'none';
-  }}
+    function updateWelcome() {
+      const jwt = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (jwt && user) {
+        document.getElementById('welcome').textContent = 'Benvenuto ' + user;
+        document.getElementById('welcome').style.display = 'inline';
+        document.getElementById('btnLogin').style.display =
+        document.getElementById('btnRegister').style.display = 'none';
+        document.getElementById('logout').style.display = 'inline';
+      } else {
+        document.getElementById('welcome').style.display = 'none';
+        document.getElementById('btnLogin').style.display =
+        document.getElementById('btnRegister').style.display = 'inline';
+        document.getElementById('logout').style.display = 'none';
+      }}
     updateWelcome();
 
-    /* login fetch */
     document.getElementById('frmLogin').addEventListener('submit', async e => {
       e.preventDefault();
       const email = loginEmail.value, password = loginPwd.value;
@@ -105,25 +105,29 @@ function updateWelcome() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', data.nome || email);
         dlgLogin.close();
-        console.log('Login effettuato:', data);
         updateWelcome();
         alert('Login effettuato con successo!');
-        /* reindirizza alla dashboard */
-       location.href = '/dashboard.html';   
-        
+        const ruolo = data.ruolo;
+        if (ruolo === 'BOA') {
+          location.href = '/dashboard-boa.html';
+        } else if (ruolo === 'BOE') {
+          location.href = '/dashboard-boe.html';
+        } else {
+          location.href = '/dashboard.html';
+        }
       } else {
         alert(data.error || 'Credenziali errate');
       }
     });
 
-    /* registrazione fetch */
     document.getElementById('frmReg').addEventListener('submit', async e => {
       e.preventDefault();
       const body = {
         nome: regNome.value,
         cognome: regCognome.value,
         email: regEmail.value,
-        password: regPwd.value
+        password: regPwd.value,
+        ruolo: document.getElementById("ruolo").value
       };
       const res = await fetch('/api/auth/register', {
         method:'POST',
@@ -132,52 +136,39 @@ function updateWelcome() {
       });
       const data = await res.json();
       if (res.ok) {
-dlgReg.close();
-alert('Registrazione avvenuta! Effettua il login.');
-dlgLogin.showModal();  
+        dlgReg.close();
+        alert('Registrazione avvenuta! Effettua il login.');
+        dlgLogin.showModal();  
       } else {
         const msg = data.errors ? data.errors[0].msg : data.error;
         alert(msg || 'Errore di registrazione');
       }
     });
-  </script>
-  <script>
-    /* --- dialog login/registrazione chiuso --- */
+
     dlgLogin.addEventListener('close', () => {
-      document.getElementById('loginEmail').value = '';
-      document.getElementById('loginPwd').value = '';
+      loginEmail.value = '';
+      loginPwd.value = '';
     });
     dlgReg.addEventListener('close', () => {
-      document.getElementById('regNome').value = '';
-      document.getElementById('regCognome').value = '';
-      document.getElementById('regEmail').value = '';
-      document.getElementById('regPwd').value = '';
+      regNome.value = '';
+      regCognome.value = '';
+      regEmail.value = '';
+      regPwd.value = '';
     });
-  </script>
 
-  <script>
-    /* --- redirect se non loggato --- */
-    const token = localStorage.getItem('token');
-    if (!token) {
-      location.href = '/index.html';
-    }
+   
 
-    /* mostra il nome */
     const userName = localStorage.getItem('user');
     if (userName) {
       document.getElementById('welcome').textContent = 'Benvenuto ' + userName;
       document.getElementById('welcome').style.display = 'inline';
-    } 
-  </script>  
+    }
 
-  <script>
-    /* --- logout --- */
     document.getElementById('logout').onclick = () => {
       localStorage.clear();
       location.href = '/index.html';
     };
 
-    /* --- carica orari & costruisci tabella --- */
     async function loadTable() {
       const res = await fetch('/api/public/timetable');
       const data = await res.json();
@@ -197,36 +188,30 @@ dlgLogin.showModal();
       });
     }
 
-    /* --- acquisto biglietto --- */
-async function compraBiglietto(idTreno) {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('⚠️ Fai login o registrati per comprare un biglietto.');
-    return;
-  }
-
-  const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
-
-  const res = await fetch('/api/tickets/buy', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + token
-    },
-    body: JSON.stringify({ tratta_id: idTreno, posto })
-  });
-
-  const data = await res.json();
-  if (res.ok) {
-    location.href = data.redirect;
-  } else {
-    alert(data.error || 'Errore acquisto');
-  }
-}
+    async function compraBiglietto(idTreno) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('⚠️ Fai login o registrati per comprare un biglietto.');
+        return;
+      }
+      const posto = prompt('Numero posto (vuoto = automatico)') || 'AUTO';
+      const res = await fetch('/api/tickets/buy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ tratta_id: idTreno, posto })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        location.href = data.redirect;
+      } else {
+        alert(data.error || 'Errore acquisto');
+      }
+    }
 
     loadTable();
   </script>
-
-
 </body>
 </html>

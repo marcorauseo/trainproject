@@ -75,3 +75,8 @@ VALUES
   ('Mario', 'Rossi', 'mario@example.com',
    '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36glD/Si1eZ2/7Nr9wxSmK',   -- password123
    'REG');
+--------------------BOA------------------------
+INSERT INTO richiesta_boa (id_treno, tipo) VALUES 
+  (1, 'straordinario'),
+  (2, 'cessazione'),
+  (3, 'straordinario');

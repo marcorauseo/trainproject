@@ -1,43 +1,34 @@
+
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const ticketRoutes = require('./routes/tickets');
 const path = require('path');
-const publicRoutes = require('./routes/public');
-const reportRoutes = require('./routes/report');
-const opsRoutes = require('./routes/ops');
-const errorHandler = require('./middleware/error');
-
-
-const authRoutes = require('./routes/auth');
 require('dotenv').config();
 
-
+const app = express();
 console.log('🚀 Server starting…');
+
+// ✅ Middleware prima delle route
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // << Questo deve venire prima di tutte le route
 
+// ✅ Rotte API
 app.use('/api/paysteam', require('./routes/paysteamHook'));
+app.use('/api/tickets', require('./routes/tickets'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/public', require('./routes/public'));
+app.use('/api/report', require('./routes/report'));
+app.use('/api/ops', require('./routes/ops'));
+app.use('/api', require('./routes/boa'));
 
-
-
-
-// Servire i file statici dalla directory 'frontend/public'
+// ✅ Static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'public')));
 
+// ✅ Gestione errori
+const errorHandler = require('./middleware/error');
+app.use(errorHandler);
 
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/public', publicRoutes);
-app.use('/api/report', reportRoutes);
-app.use('/api/ops', opsRoutes);
-
-
-
+// ✅ Server listen
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
 });
-
-
-app.use(errorHandler);
