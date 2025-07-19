@@ -6,6 +6,8 @@ require('dotenv').config();
 
 const app = express();
 console.log('🚀 Server starting…');
+const cors = require('cors');
+
 
 // ✅ Middleware prima delle route
 app.use(cors());
@@ -21,6 +23,8 @@ app.use('/api/ops', require('./routes/ops'));
 app.use('/api', require('./routes/boa'));
 app.use('/api/boe', require('./routes/boe'));
 app.use('/api', require('./routes/boe'));
+app.use(cors());
+
 
 
 
