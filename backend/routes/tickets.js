@@ -119,26 +119,25 @@ router.post('/buy', auth(['REG']), async (req, res) => {
     const idBiglietto = result.rows[0].id_biglietto;
 
     // richiesta a PaySteam per ottenere la URL di checkout
-    const response = await fetch('http://localhost:4000/api/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': 'ferrovie-key' },
-      body: JSON.stringify({
-        url_invio: 'http://localhost:3000',
-        url_risposta: 'http://localhost:3000/api/paysteam/notify',
-        id_esercente: 'ferrovie-turistiche',
-        id_transazione: idBiglietto,
-        descrizione: `Biglietto treno ${tratta_id}`,
-        prezzo: 15.00,
-        email_utente: userEmail  // ✅ per mappare l'utente su PaySteam
-      })
-    });
+const response = await fetch(`${process.env.PAYSTEAM_URL}/api/pay`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'x-api-key': 'ferrovie-key' },
+  body: JSON.stringify({
+    url_invio: process.env.APP_BASE_URL,
+    url_risposta: `${process.env.APP_BASE_URL}/api/paysteam/notify`,
+    id_esercente: 'ferrovie-turistiche',
+    id_transazione: idBiglietto,
+    descrizione: `Biglietto treno ${tratta_id}`,
+    prezzo: 15.00,
+    email_utente: userEmail
+  })
+});
 
-    const payData = await response.json();
-    if (!response.ok || !payData.redirect)
-      throw new Error(payData.error || 'Errore da PaySteam');
+const payData = await response.json();
+if (!response.ok || !payData.redirect)
+  throw new Error(payData.error || 'Errore da PaySteam');
 
-    // redirect completo verso PaySteam (porta 4000)
-    res.json({ redirect: 'http://localhost:4000' + payData.redirect });
+res.json({ redirect: `${process.env.PAYSTEAM_URL}${payData.redirect}` });
 
   } catch (err) {
     console.error(err);
