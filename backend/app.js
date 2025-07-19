@@ -10,7 +10,7 @@ console.log('🚀 Server starting…');
 
 
 // ✅ Middleware prima delle route
-
+app.use(cors());
 app.use(express.json()); // << Questo deve venire prima di tutte le route
 
 // ✅ Rotte API
@@ -23,7 +23,6 @@ app.use('/api/ops', require('./routes/ops'));
 app.use('/api', require('./routes/boa'));
 app.use('/api/boe', require('./routes/boe'));
 app.use('/api', require('./routes/boe'));
-app.use(cors());
 
 
 
