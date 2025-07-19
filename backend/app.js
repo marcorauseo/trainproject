@@ -40,3 +40,11 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server in ascolto sulla porta ${PORT}`);
 });
+
+app.post('/api/paysteam/notify', (req, res) => {
+  console.log("📬 Notifica ricevuta:", req.body);
+   console.log("=== RICHIESTA NOTIFICA RICEVUTA ===");
+  console.log(req.headers);
+  console.log(req.body);
+  res.status(200).json({ received: true });
+});
