@@ -56,12 +56,11 @@ router.patch('/:id/cancel', auth(['REG','BOA','BOE']), async (req,res)=>{
 module.exports = router;   /* unica export */
 
 /* --------- 0. acquisto biglietto --------- */
-
-/* --------- 0. acquisto biglietto --------- */
 router.post('/buy', auth(['REG']), async (req, res) => {
   console.log('Richiesta acquisto:', req.body);
   console.log('Utente:', req.user);
   const userId = req.user.id;
+  const userEmail = req.user.email;
   const { tratta_id, posto } = req.body;
 
   if (!tratta_id)
@@ -119,24 +118,27 @@ router.post('/buy', auth(['REG']), async (req, res) => {
 
     const idBiglietto = result.rows[0].id_biglietto;
 
-    // chiamata a PaySteam
+    // richiesta a PaySteam per ottenere la URL di checkout
     const response = await fetch('http://localhost:4000/api/pay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': 'ferrovie-key' },
       body: JSON.stringify({
         url_invio: 'http://localhost:3000',
-        url_risposta: 'http://localhost:3000/api/paysteam/callback',
+        url_risposta: 'http://localhost:3000/api/paysteam/notify',
         id_esercente: 'ferrovie-turistiche',
         id_transazione: idBiglietto,
         descrizione: `Biglietto treno ${tratta_id}`,
-        prezzo: 15.00
+        prezzo: 15.00,
+        email_utente: userEmail  // ✅ per mappare l'utente su PaySteam
       })
     });
 
     const payData = await response.json();
-    if (!response.ok) throw new Error(payData.error || 'Errore da PaySteam');
+    if (!response.ok || !payData.redirect)
+      throw new Error(payData.error || 'Errore da PaySteam');
 
-    res.json({ message: 'Richiesta inviata a PaySteam', id: idBiglietto });
+    // redirect completo verso PaySteam (porta 4000)
+    res.json({ redirect: 'http://localhost:4000' + payData.redirect });
 
   } catch (err) {
     console.error(err);

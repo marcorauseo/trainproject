@@ -2,8 +2,10 @@
 const express = require('express');
 const pool    = require('../db');
 const router  = express.Router();
+const validateApiKey = require('../middleware/validateApiKey');
 
-router.post('/notify', async (req, res) => {
+
+router.post('/notify', validateApiKey, async (req, res) => {
   const { idTransazione, esito } = req.body;
 
   if (!['OK', 'KO'].includes(esito)) {
@@ -11,9 +13,6 @@ router.post('/notify', async (req, res) => {
   }
 
   const nuovoStato = esito === 'OK' ? 'PAGATO' : 'KO';
-  console.log('esito:', esito);
-  console.log('nuovoStato:', nuovoStato);
-  console.log('idTransazione:', idTransazione);
 
   try {
     await pool.query(

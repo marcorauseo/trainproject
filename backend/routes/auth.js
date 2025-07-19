@@ -7,65 +7,31 @@ const { body, validationResult } = require('express-validator');
 
 
 // Registrazione
-router.post(
-  '/register',
+router.post('/register', async (req, res) => {
 
-  /* ① Validazione campi ------------------------------------------------ */
-  body('nome').notEmpty().withMessage('Il nome è obbligatorio'),
-  body('cognome').notEmpty().withMessage('Il cognome è obbligatorio'),
-  body('email').isEmail().withMessage('Email non valida'),
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password troppo corta (min 8 caratteri)'),
+  const { nome, cognome, email, password } = req.body;
 
- 
-  async (req, res) => {
-    
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+  if (!nome || !cognome || !email || !password)
+    return res.status(400).json({ error: 'Campi obbligatori mancanti' });
 
-    const {
-      nome,
-      cognome,
-      email,
-      password,
-      cellulare = null,
-      data_nascita = null,
-      luogo_nascita = null
-    } = req.body;
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const result = await pool.query(`
+      INSERT INTO utente (NOME, COGNOME, EMAIL, HASH_PWD, RUOLO)
+      VALUES ($1, $2, $3, $4, 'REG')
+      RETURNING ID_UTENTE
+    `, [nome, cognome, email, hash]);
 
-    try {
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const result = await pool.query(
-        `INSERT INTO UTENTE
-         (NOME, COGNOME, EMAIL, HASH_PWD, CELLULARE,
-          DATA_NASCITA, LUOGO_NASCITA, RUOLO)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'REG')
-         RETURNING ID_UTENTE`,
-        [nome, cognome, email, hashedPassword,
-         cellulare, data_nascita, luogo_nascita]
-      );
-
-      res.status(201).json({
-        message: 'Utente registrato con successo',
-        id: result.rows[0].id_utente
-      });
-    } catch (err) {
-      /* 23505 = violazione unique (email già usata) */
-      if (err.code === '23505') {                           // :contentReference[oaicite:4]{index=4}
-        return res
-          .status(409)
-          .json({ error: 'Email già registrata' });
-      }
-
-      console.error(err);                                   // log interno
-      res.status(500).json({ error: 'Errore interno' });
+    res.status(201).json({ message: 'Registrazione completata', id: result.rows[0].id_utente });
+  } catch (err) {
+    console.error(err);
+    if (err.code === '23505') {
+      res.status(409).json({ error: 'Email già registrata' });
+    } else {
+      res.status(500).json({ error: 'Errore server durante la registrazione' });
     }
   }
-);
+});
 
 
 
@@ -83,7 +49,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Password errata' });
     }
     const token = jwt.sign(
-      { id: user.id_utente, ruolo: user.ruolo, nome: user.nome },
+      { id: user.id_utente, ruolo: user.ruolo, nome: user.nome, email: user.email  },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -93,6 +59,9 @@ router.post('/login', async (req, res) => {
     res.status(500).json({ error: 'Errore durante il login' });
   }
 });
+
+
+
 
 module.exports = router;
 

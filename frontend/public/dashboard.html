@@ -91,9 +91,8 @@
       body: JSON.stringify({ tratta_id: idTreno, posto })
     });
     const data = await res.json();
-    if (res.ok) {
-      alert('Biglietto acquistato! Attendi conferma da PaySteam...');
-      loadBiglietti();
+    if (res.ok && data.redirect) {
+      window.location.href = data.redirect;
     } else {
       alert(data.error || 'Errore acquisto');
     }
