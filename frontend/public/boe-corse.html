@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestione Corse - BOE</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    h1 { color: #0077b6; }
+    form, table { margin-top: 20px; width: 100%; max-width: 800px; }
+    input, select { padding: 6px; margin: 6px 0; width: 100%; }
+    button { padding: 8px 12px; margin-top: 10px; }
+    table { border-collapse: collapse; margin-top: 30px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+    th { background: #eee; }
+  </style>
+</head>
+<body>
+  <h1>Backoffice Esercizio – Gestione corse</h1>
+
+  <form id="newCorsaForm">
+    <h3>Nuova corsa</h3>
+    <label>Data: <input type="date" name="data" required></label>
+    <label>Codice corsa: <input type="text" name="codice" required></label>
+    <label>Stazione partenza: <select name="partenza"></select></label>
+    <label>Stazione arrivo: <select name="arrivo"></select></label>
+    <label>Convoglio: <select name="convoglio"></select></label>
+    <button type="submit">Aggiungi corsa</button>
+    <div id="msg"></div>
+  </form>
+
+  <h3>Corse pianificate</h3>
+  <table id="tblCorse">
+    <thead>
+      <tr><th>Data</th><th>Codice</th><th>Partenza</th><th>Arrivo</th><th>Azioni</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+<script>
+let stazioni = [];
+
+async function caricaStazioni() {
+  const res = await fetch('/api/public/stazioni');
+  stazioni = await res.json();
+  const selPart = document.querySelector('[name=partenza]');
+  const selArr  = document.querySelector('[name=arrivo]');
+  selPart.innerHTML = selArr.innerHTML = stazioni.map(s => `<option value="${s.id_stazione}">${s.nome}</option>`).join('');
+}
+
+async function caricaConvogli() {
+  const res = await fetch('/api/public/convogli');
+  const convogli = await res.json();
+  const sel = document.querySelector('[name=convoglio]');
+  sel.innerHTML = convogli.map(c => `<option value="${c.id_convoglio}">${c.nome_convoglio}</option>`).join('');
+}
+
+async function caricaCorse() {
+  const res = await fetch('/api/public/corse');
+  const data = await res.json();
+  const tbody = document.querySelector('#tblCorse tbody');
+  tbody.innerHTML = '';
+  data.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.data}</td>
+      <td>${r.codice_corsa}</td>
+      <td>${r.partenza}</td>
+      <td>${r.arrivo}</td>
+      <td><button onclick="cancella(${r.id_treno})">Elimina</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function cancella(id) {
+  if (!confirm('Confermi eliminazione corsa?')) return;
+  const res = await fetch(`/api/ops/corsa/${id}`, { method: 'DELETE' });
+  if (res.ok) caricaCorse();
+  else alert('Errore eliminazione');
+}
+
+// invio nuova corsa
+newCorsaForm.onsubmit = async e => {
+  e.preventDefault();
+  const f = e.target;
+  const payload = {
+    data: f.data.value,
+    codice: f.codice.value,
+    partenza: f.partenza.value,
+    arrivo: f.arrivo.value,
+    convoglio: f.convoglio.value
+  };
+  const res = await fetch('/api/ops/corsa', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const out = await res.json();
+  document.getElementById('msg').textContent = out.message || out.error;
+  if (res.ok) {
+    f.reset();
+    caricaCorse();
+  }
+}
+
+caricaStazioni();
+caricaConvogli();
+caricaCorse();
+</script>
+</body>
+</html>

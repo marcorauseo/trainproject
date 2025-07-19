@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Report Occupazione Treni</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    h1 { color: #0077b6; }
+    label { margin-right: 10px; }
+    input[type="date"] { padding: 6px; margin-right: 10px; }
+    button { padding: 6px 12px; }
+    #grafico-container { width: 80%; margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Occupazione treni</h1>
+  <div>
+    <label>Dal: <input type="date" id="dal"></label>
+    <label>Al: <input type="date" id="al"></label>
+    <button onclick="caricaReport()">Genera report</button>
+    <button onclick="esportaCSV()">📄 Esporta CSV</button>
+  </div>
+
+  <div id="grafico-container">
+    <canvas id="graficoOccupazione"></canvas>
+  </div>
+
+<script>
+let datiCorrenti = [];
+
+async function caricaReport() {
+  const dal = document.getElementById('dal').value;
+  const al = document.getElementById('al').value;
+  if (!dal || !al) return alert("Seleziona l'intervallo di date");
+
+  const res = await fetch(`/api/report/occupazione?dal=${dal}&al=${al}`);
+  const data = await res.json();
+
+  if (!res.ok) return alert(data.error || 'Errore report');
+
+  datiCorrenti = data;
+
+  const ctx = document.getElementById('graficoOccupazione').getContext('2d');
+  if (window.myChart) window.myChart.destroy();
+
+  window.myChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(r => `Corsa ${r.codice_corsa}`),
+      datasets: [{
+        label: '% Occupazione',
+        data: data.map(r => parseFloat(r.percentuale_occupazione)),
+        backgroundColor: 'rgba(0, 119, 182, 0.6)'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+function esportaCSV() {
+  if (!datiCorrenti.length) return alert('Nessun dato da esportare');
+
+  const header = ['Corsa', 'Data', 'Occupazione %'];
+  const rows = datiCorrenti.map(r => [r.codice_corsa, r.data, r.percentuale_occupazione]);
+  const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'report_occupazione.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
