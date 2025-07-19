@@ -6,11 +6,11 @@ require('dotenv').config();
 
 const app = express();
 console.log('🚀 Server starting…');
-const cors = require('cors');
+
 
 
 // ✅ Middleware prima delle route
-app.use(cors());
+
 app.use(express.json()); // << Questo deve venire prima di tutte le route
 
 // ✅ Rotte API
