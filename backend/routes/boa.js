@@ -89,7 +89,7 @@ router.post('/boe/richieste/:id/completa', async (req, res) => {
 router.get('/boe/treni', async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM treno WHERE id IN (SELECT id_treno FROM richiesta_boa WHERE tipo = 'treno')"
+      "SELECT * FROM treno WHERE id_treno IN (SELECT id_treno FROM richiesta_boa WHERE tipo = 'treno')"
     );
     res.json(result.rows);
   } catch (err) {

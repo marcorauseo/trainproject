@@ -19,6 +19,10 @@ app.use('/api/public', require('./routes/public'));
 app.use('/api/report', require('./routes/report'));
 app.use('/api/ops', require('./routes/ops'));
 app.use('/api', require('./routes/boa'));
+app.use('/api/boe', require('./routes/boe'));
+app.use('/api', require('./routes/boe'));
+
+
 
 // ✅ Static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'public')));

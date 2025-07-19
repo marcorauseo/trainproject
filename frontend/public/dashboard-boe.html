@@ -1,30 +1,64 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <title>Dashboard BOE - Backoffice Esercizio</title>
+  <meta charset="UTF-8" />
+  <title>Dashboard BOE – Esercizio</title>
   <style>
     body { font-family: Arial; padding: 20px; }
-    section { margin-bottom: 20px; }
-    label, select, input { margin: 4px 0; display: block; }
-    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 8px; }
-    th { background-color: #f2f2f2; }
+    input, select { margin: 5px; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 6px; }
+    th { background-color: #f0f0f0; }
   </style>
 </head>
 <body>
-  <h1>Dashboard Backoffice Esercizio (BOE)</h1>
+  <h1>Dashboard BOE – Backoffice Esercizio</h1>
 
   <section>
-    <h2>Richieste dal BOA</h2>
-    <table>
+    <h2>Richieste da BOA</h2>
+    <table id="tblRichieste">
       <thead>
-        <tr><th>ID Richiesta</th><th>ID Treno</th><th>Tipo</th><th>Data</th><th>Azione</th></tr>
+        <tr><th>ID</th><th>Tipo</th><th>Treno</th><th>Azione</th></tr>
       </thead>
-      <tbody id="tblRichieste">
-        <!-- dinamico -->
-      </tbody>
+      <tbody></tbody>
     </table>
   </section>
+
+  <section>
+    <h2>Aggiungi Nuovo Treno</h2>
+    <form id="formTreno">
+      <input type="date" id="data" required />
+      <input type="text" id="codice" placeholder="Codice corsa" required />
+      <select id="direzione">
+        <option value="A">Andata</option>
+        <option value="R">Ritorno</option>
+      </select>
+      <input type="number" id="convoglio" placeholder="ID Convoglio" required />
+      <input type="number" id="partenza" placeholder="ID Stazione Partenza" required />
+      <input type="number" id="arrivo" placeholder="ID Stazione Arrivo" required />
+      <input type="time" id="orap" placeholder="Partenza" required />
+      
+      <button type="submit">Crea Treno</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Treni Inseriti</h2>
+    <table id="tblTreni">
+      <thead><tr><th>ID</th><th>Codice</th><th>Data</th><th>Azioni</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section>
+  <h2>Treni Attivi (pubblici)</h2>
+  <table id="tblPubblici">
+    <thead>
+      <tr><th>ID</th><th>Codice</th><th>Da</th><th>A</th><th>Partenza</th><th>Arrivo</th><th>Azioni</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
 
   <script>
     const token = localStorage.getItem('token');
@@ -34,36 +68,111 @@
         headers: { 'Authorization': 'Bearer ' + token }
       });
       const richieste = await res.json();
-      const tbody = document.getElementById('tblRichieste');
+      const tbody = document.querySelector('#tblRichieste tbody');
       tbody.innerHTML = '';
-
       richieste.forEach(r => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${r.id}</td>
-          <td>${r.id_treno}</td>
-          <td>${r.tipo}</td>
-          <td>${new Date(r.data_richiesta).toLocaleString()}</td>
-          <td><button onclick="gestisci(${r.id})">Completa</button></td>
+          <td>${r.id}</td><td>${r.tipo}</td><td>${r.id_treno}</td>
+          <td><button onclick="completa(${r.id})">Completa</button></td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    async function gestisci(id) {
-      const ok = confirm("Segna come completata la richiesta #" + id + "?");
-      if (!ok) return;
-
+    async function completa(id) {
       await fetch('/api/boe/richieste/' + id + '/completa', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + token }
       });
-
-      alert("Richiesta completata");
+      alert('Richiesta completata');
       caricaRichieste();
     }
 
+    document.getElementById('formTreno').addEventListener('submit', async e => {
+      e.preventDefault();
+      const body = {
+        data: document.getElementById('data').value,
+        codice: document.getElementById('codice').value,
+        direzione: document.getElementById('direzione').value,
+        convoglio: +document.getElementById('convoglio').value,
+        partenza: +document.getElementById('partenza').value,
+        arrivo: +document.getElementById('arrivo').value,
+        orap: document.getElementById('orap').value,
+       
+      };
+      const res = await fetch('/api/boe/treni', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      alert(res.ok ? 'Treno creato' : 'Errore creazione treno');
+      caricaTreni();
+    });
+
+    async function caricaTreni() {
+      const res = await fetch('/api/boe/treni', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const treni = await res.json();
+      const tbody = document.querySelector('#tblTreni tbody');
+      tbody.innerHTML = '';
+      treni.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>\${t.id_treno}</td><td>\${t.codice_corsa}</td><td>\${t.data}</td>
+          <td><button onclick="elimina(\${t.id_treno})">Elimina</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+async function elimina(id) {
+  if (!confirm('Confermi eliminazione treno ' + id + '?')) return;
+
+  const res = await fetch('/api/boe/treni/' + id, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+
+  if (res.ok) {
+    alert('✅ Treno eliminato con successo');
+    caricaTreni();
+    caricaPubblici();
+  } else {
+    const data = await res.json();
+    alert('❌ Impossibile eliminare il treno: ' + (data.error || 'Errore sconosciuto'));
+  }
+}
+
+    async function caricaPubblici() {
+  const res = await fetch('/api/boe/pubblici', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  const dati = await res.json();
+  const tbody = document.querySelector('#tblPubblici tbody');
+  tbody.innerHTML = '';
+  dati.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${t.id_treno}</td>
+      <td>${t.codice_corsa}</td>
+      <td>${t.stazione_partenza}</td>
+      <td>${t.stazione_arrivo}</td>
+      <td>${t.orario_partenza}</td>
+      <td>${t.orario_arrivo}</td>
+      <td><button onclick="elimina(${t.id_treno})">Elimina</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+caricaPubblici();
+
     caricaRichieste();
+    caricaTreni();
   </script>
 </body>
 </html>
